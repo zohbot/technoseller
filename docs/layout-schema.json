@@ -1,0 +1,82 @@
+{
+  "project": "TECHNOseller Portal",
+  "version": "0.2.0",
+  "frontendStack": ["React", "Vite", "Tailwind CSS", "Radix UI primitives", "lucide-react"],
+  "privacy": {
+    "usesPrivateArchiveAssets": false,
+    "dataPolicy": "Synthetic marketplace data only",
+    "assetPolicy": "Use approved, cleaned, derivative assets only when provided"
+  },
+  "routes": [
+    {
+      "path": "/",
+      "name": "Directory",
+      "sections": [
+        "workspace",
+        "search-console",
+        "summary-stats",
+        "operator-focus",
+        "vendor-grid",
+        "service-tracks",
+        "regional-intelligence",
+        "marketplace-operating-system",
+        "lead-flow",
+        "moderation-queue"
+      ]
+    },
+    {
+      "path": "/vendors/:slug",
+      "name": "Vendor Profile",
+      "sections": [
+        "profile-header",
+        "vendor-overview",
+        "capabilities",
+        "opportunities",
+        "lead-form"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "SearchConsole",
+      "responsibility": "Command-style resource finder with saved views, primary filters, active pills, advanced drawer, result count, and sorting"
+    },
+    {
+      "name": "VendorCard",
+      "responsibility": "Summarizes vendor fit, regions, services, and profile link"
+    },
+    {
+      "name": "ServiceTracks",
+      "responsibility": "Image-backed category workflow sections for compliance review, supplier discovery, and lead routing"
+    },
+    {
+      "name": "RegionalIntelligence",
+      "responsibility": "Shows region-by-region marketplace coverage and opportunity context"
+    },
+    {
+      "name": "OperatingSystem",
+      "responsibility": "Explains the broader buyer, vendor, and moderation product story"
+    },
+    {
+      "name": "VendorProfile",
+      "responsibility": "Displays operational profile and buyer inquiry form"
+    },
+    {
+      "name": "LeadForm",
+      "responsibility": "Submits buyer inquiry to moderation"
+    },
+    {
+      "name": "ModerationQueue",
+      "responsibility": "Lets operators qualify or archive incoming leads"
+    }
+  ],
+  "api": [
+    "GET /api/health",
+    "GET /api/taxonomy",
+    "GET /api/vendors",
+    "GET /api/vendors/:slug",
+    "POST /api/leads",
+    "GET /api/admin/leads",
+    "PATCH /api/admin/leads/:id"
+  ]
+}
