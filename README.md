@@ -8,6 +8,14 @@ TECHNOseller Portal is a standalone public SaaS concept for vendor discovery, se
 
 The project is inspired by the structure of an old private template archive, but it does not include or publish private archive files. All marketplace content in this repo is synthetic and safe for public demonstration.
 
+For buyer, customer, or customization inquiries, visit [SYHTEK](https://syhtek.com).
+
+## Buyer / Customer Notes
+
+This project presents a production-minded marketplace concept for service discovery, vendor qualification, lead routing, and moderation. It is designed as a portfolio-ready foundation that can be adapted into a real vertical directory, B2B vendor network, procurement portal, or managed lead-generation product.
+
+Design direction, product architecture, frontend implementation, backend API scaffolding, and public presentation by [SYHTEK](https://syhtek.com).
+
 ## What It Includes
 
 - Responsive marketplace directory frontend
@@ -22,6 +30,18 @@ The project is inspired by the structure of an old private template archive, but
 - Admin moderation queue with lead status updates
 - Architecture notes and layout schema
 - No required third-party runtime dependencies
+
+## Tech Behind The Website
+
+- React 19 and TypeScript
+- Vite production build
+- Tailwind CSS 4 styling system
+- Radix UI primitives for tabs, dialogs, selects, and accessible controls
+- Lucide icon system
+- Node HTTP backend with JSON API endpoints
+- Synthetic marketplace data layer
+- API tests with Node's built-in test runner
+- Static assets and screenshots prepared for GitHub presentation
 
 ## Run Locally
 

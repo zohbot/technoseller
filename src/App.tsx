@@ -1111,8 +1111,20 @@ export default function App() {
       </main>
       <footer className="mt-8 border-t border-[#141414]/10 px-5 py-8 text-sm text-[#5f6670]">
         <div className="mx-auto flex max-w-[1540px] justify-between gap-4 max-sm:block">
-          <p>TECHNOseller Portal is a clean public concept using synthetic marketplace data only.</p>
-          <a className="font-black text-[#0d21a1]" href="/api/health">API status</a>
+          <p>
+            TECHNOseller Portal is a clean public concept using synthetic marketplace data only.
+            Design, product direction, and frontend/backend implementation by{" "}
+            <a className="font-black text-[#0d21a1]" href="https://syhtek.com" rel="noreferrer" target="_blank">
+              SYHTEK
+            </a>
+            .
+          </p>
+          <div className="flex gap-4 max-sm:mt-3">
+            <a className="font-black text-[#0d21a1]" href="https://syhtek.com" rel="noreferrer" target="_blank">
+              Inquiries
+            </a>
+            <a className="font-black text-[#0d21a1]" href="/api/health">API status</a>
+          </div>
         </div>
       </footer>
     </>
