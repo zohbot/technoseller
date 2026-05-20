@@ -1,0 +1,28 @@
+{
+  "generatedFor": "TECHNOseller Portal demo",
+  "workflow": "Supplier shortlist",
+  "owner": "Sourcing Desk",
+  "updatedAt": "2026-05-13T12:20:00.000Z",
+  "buyerNeed": "Hardware component supplier discovery and sampling workflow",
+  "recommendedVendor": "Meridian Sourceworks",
+  "shortlist": [
+    {
+      "tier": "primary",
+      "category": "Component sourcing",
+      "qualification": "Supplier scorecard complete",
+      "nextStep": "Request prototype sampling window"
+    },
+    {
+      "tier": "secondary",
+      "category": "Factory qualification",
+      "qualification": "Quality readiness review pending",
+      "nextStep": "Collect production documentation"
+    },
+    {
+      "tier": "watchlist",
+      "category": "Regional backup supplier",
+      "qualification": "Commercial diligence required",
+      "nextStep": "Validate export support coverage"
+    }
+  ]
+}

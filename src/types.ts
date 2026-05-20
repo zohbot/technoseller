@@ -45,3 +45,29 @@ export type Summary = {
   serviceCount: number;
   verifiedCount: number;
 };
+
+export type User = {
+  username: string;
+  displayName: string;
+  role: "admin" | "operator";
+};
+
+export type AuthSession = {
+  authenticated: boolean;
+  user: User | null;
+};
+
+export type DemoArtifact = {
+  id: string;
+  title: string;
+  type: string;
+  vendorSlug: string;
+  status: "approved" | "internal" | "review";
+  owner: string;
+  region: string;
+  updatedAt: string;
+  fileSize: string;
+  href: string;
+  summary: string;
+  signals: string[];
+};

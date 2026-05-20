@@ -6,6 +6,15 @@ import { filterVendors, findVendor, summarizeMarketplace } from "../src/lib/sear
 let server;
 let baseUrl;
 
+async function login(username = "admin") {
+  const response = await fetch(`${baseUrl}/api/auth/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+  return response.headers.get("set-cookie");
+}
+
 before(async () => {
   server = createAppServer();
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -57,6 +66,24 @@ test("serves vendor API results", async () => {
   assert.equal(payload.vendors[0].slug, "atlas-freight-network");
 });
 
+test("serves demo artifact metadata", async () => {
+  const response = await fetch(`${baseUrl}/api/artifacts?vendorSlug=atlas-freight-network`);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.artifacts.length, 1);
+  assert.equal(payload.artifacts[0].type, "Verification packet");
+  assert.match(payload.artifacts[0].href, /demo-artifacts/);
+});
+
+test("sets baseline security headers", async () => {
+  const response = await fetch(`${baseUrl}/api/health`);
+
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.match(response.headers.get("content-security-policy"), /default-src 'self'/);
+});
+
 test("validates and stores a lead", async () => {
   const response = await fetch(`${baseUrl}/api/leads`, {
     method: "POST",
@@ -74,7 +101,89 @@ test("validates and stores a lead", async () => {
   assert.equal(response.status, 201);
   assert.equal(payload.lead.status, "needs-review");
 
+  const adminCookie = await login("admin");
   const queueResponse = await fetch(`${baseUrl}/api/admin/leads`);
-  const queuePayload = await queueResponse.json();
+  assert.equal(queueResponse.status, 401);
+
+  const adminQueueResponse = await fetch(`${baseUrl}/api/admin/leads`, {
+    headers: { cookie: adminCookie }
+  });
+  const queuePayload = await adminQueueResponse.json();
+  assert.equal(adminQueueResponse.status, 200);
   assert.equal(queuePayload.leads[0].company, "Demo Buyer");
+});
+
+test("protects lead moderation updates with admin role", async () => {
+  const operatorCookie = await login("demo");
+  const adminCookie = await login("admin");
+
+  const queueResponse = await fetch(`${baseUrl}/api/admin/leads`, {
+    headers: { cookie: adminCookie }
+  });
+  const queuePayload = await queueResponse.json();
+  const lead = queuePayload.leads[0];
+
+  const operatorResponse = await fetch(`${baseUrl}/api/admin/leads/${lead.id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", cookie: operatorCookie },
+    body: JSON.stringify({ status: "qualified" })
+  });
+  assert.equal(operatorResponse.status, 403);
+
+  const adminResponse = await fetch(`${baseUrl}/api/admin/leads/${lead.id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ status: "qualified" })
+  });
+  const adminPayload = await adminResponse.json();
+  assert.equal(adminResponse.status, 200);
+  assert.equal(adminPayload.lead.status, "qualified");
+});
+
+test("rejects oversized JSON payloads", async () => {
+  const response = await fetch(`${baseUrl}/api/leads`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      vendorSlug: "atlas-freight-network",
+      company: "Payload Test",
+      name: "Taylor Morgan",
+      email: "payload@example.com",
+      need: "x".repeat(70_000),
+      timeline: "45 days"
+    })
+  });
+  const payload = await response.json();
+  assert.equal(response.status, 413);
+  assert.match(payload.error, /too large/i);
+});
+
+test("creates and clears a dummy auth session", async () => {
+  const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "demo" })
+  });
+  const loginPayload = await loginResponse.json();
+  const cookie = loginResponse.headers.get("set-cookie");
+
+  assert.equal(loginResponse.status, 200);
+  assert.equal(loginPayload.authenticated, true);
+  assert.equal(loginPayload.user.username, "demo");
+  assert.match(cookie, /technoseller_session=/);
+
+  const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
+    headers: { cookie }
+  });
+  const sessionPayload = await sessionResponse.json();
+  assert.equal(sessionPayload.authenticated, true);
+  assert.equal(sessionPayload.user.role, "operator");
+
+  const logoutResponse = await fetch(`${baseUrl}/api/auth/logout`, {
+    method: "POST",
+    headers: { cookie }
+  });
+  const logoutPayload = await logoutResponse.json();
+  assert.equal(logoutPayload.authenticated, false);
+  assert.match(logoutResponse.headers.get("set-cookie"), /Max-Age=0/);
 });

@@ -1,29 +1,47 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Select from "@radix-ui/react-select";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
+  Activity,
   Archive,
   ArrowLeft,
+  Bell,
   Boxes,
   Briefcase,
+  Building2,
   CheckCircle2,
   ChevronDown,
   Clock3,
+  Download,
+  FileCheck2,
+  FileText,
+  FolderOpen,
+  Gauge,
   Globe2,
+  Inbox,
   LayoutDashboard,
+  LockKeyhole,
+  LogIn,
+  LogOut,
   MapPin,
   Network,
   Search,
   Send,
+  Settings,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Star,
+  TrendingUp,
+  UserCog,
+  UserRound,
+  Users,
   X
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState, type ButtonHTMLAttributes, type ComponentProps, type ReactNode } from "react";
 import { cn } from "./lib/utils";
-import type { Lead, LeadStatus, Summary, Taxonomy, Vendor, VerificationStatus } from "./types";
+import type { AuthSession, DemoArtifact, Lead, LeadStatus, Summary, Taxonomy, User, Vendor } from "./types";
 
 type Filters = {
   query: string;
@@ -76,6 +94,7 @@ const statusLabels: Record<string, string> = {
 async function request<T>(path: string, options: RequestInit = {}) {
   const response = await fetch(path, {
     headers: { "content-type": "application/json" },
+    credentials: "same-origin",
     ...options
   });
   const payload = (await response.json()) as T & { error?: string };
@@ -208,6 +227,23 @@ function responseLabel(value: string) {
     "1-day": "1 day",
     "2-days": "2 days"
   }[value] || value;
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function averageScore(vendors: Vendor[]) {
+  if (!vendors.length) return 0;
+  return vendors.reduce((total, vendor) => total + vendor.leadScore, 0) / vendors.length;
+}
+
+function formatArtifactDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(new Date(value));
 }
 
 function StatTile({ value, label }: { value: number; label: string }) {
@@ -593,6 +629,238 @@ function Directory({ vendors, sort }: { vendors: Vendor[]; sort: string }) {
   );
 }
 
+function OperatorWidgets({
+  summary,
+  vendors,
+  leads,
+  user,
+  onLogin
+}: {
+  summary: Summary | null;
+  vendors: Vendor[];
+  leads: Lead[];
+  user: User | null;
+  onLogin: () => void;
+}) {
+  const verifiedVendors = vendors.filter((vendor) => vendor.verificationStatus === "verified").length;
+  const pendingLeads = leads.filter((lead) => lead.status === "needs-review").length;
+  const qualifiedLeads = leads.filter((lead) => lead.status === "qualified").length;
+  const avgScore = averageScore(vendors);
+  const topRegions = Array.from(new Set(vendors.flatMap((vendor) => vendor.regions))).slice(0, 5);
+  const recentLeads = leads.slice(0, 3);
+  const pipeline = [
+    { label: "Discover", value: summary?.vendorCount || vendors.length, icon: Search },
+    { label: "Verify", value: verifiedVendors, icon: ShieldCheck },
+    { label: "Route", value: pendingLeads, icon: Inbox },
+    { label: "Qualify", value: qualifiedLeads, icon: CheckCircle2 }
+  ];
+
+  return (
+    <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-5 rounded-[8px] border border-[#141414]/10 bg-[#011638] p-6 text-white shadow-[0_24px_70px_rgba(1,22,56,0.2)]">
+        <div className="flex items-start justify-between gap-4 max-sm:block">
+          <div>
+            <p className="text-xs font-black uppercase text-[#eec643]">Operator cockpit</p>
+            <h2 className="mt-3 text-3xl font-black leading-tight">
+              {user ? `Welcome back, ${user.displayName || user.username}.` : "Preview the signed-in operator workspace."}
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
+              The richer console layer gives buyers, vendors, and moderators a clearer sense of activity, account state, and marketplace momentum.
+            </p>
+          </div>
+          {user ? (
+            <div className="grid min-w-40 justify-items-end gap-2 max-sm:mt-4 max-sm:justify-items-start">
+              <span className="grid size-14 place-items-center rounded-[8px] bg-[#eec643] text-lg font-black text-[#141414]">
+                {initials(user.displayName || user.username)}
+              </span>
+              <Badge tone="gold">{user.role} session</Badge>
+            </div>
+          ) : (
+            <Button className="bg-[#eec643] text-[#141414] hover:bg-white max-sm:mt-4" onClick={onLogin}>
+              <LogIn className="size-4" />
+              Sign in
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          {[
+            [Gauge, formatPercent(avgScore), "avg fit score"],
+            [Building2, summary?.vendorCount || vendors.length, "vendors indexed"],
+            [Users, summary?.verifiedCount || verifiedVendors, "verified partners"],
+            [TrendingUp, pendingLeads, "leads in review"]
+          ].map(([Icon, value, label]) => {
+            const IconComponent = Icon as typeof Gauge;
+            return (
+              <article key={label as string} className="rounded-[8px] border border-white/12 bg-white/8 p-4">
+                <IconComponent className="size-5 text-[#eec643]" />
+                <strong className="mt-4 block text-2xl font-black">{value as ReactNode}</strong>
+                <span className="text-sm text-white/65">{label as string}</span>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <article className="rounded-[8px] border border-[#141414]/10 bg-white p-5 shadow-[0_18px_50px_rgba(1,22,56,0.08)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase text-[#c79f1d]">Workflow pipeline</p>
+              <h3 className="mt-1 text-xl font-black text-[#141414]">Queue health</h3>
+            </div>
+            <Activity className="size-5 text-[#0d21a1]" />
+          </div>
+          <div className="mt-5 grid gap-3">
+            {pipeline.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+                  <span className="grid size-9 place-items-center rounded-[8px] bg-[#eef0f2] text-[#0d21a1]">
+                    <Icon className="size-4" />
+                  </span>
+                  <div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[#eef0f2]">
+                      <div className="h-full rounded-full bg-[#0d21a1]" style={{ width: `${Math.max(24, 100 - index * 18)}%` }} />
+                    </div>
+                    <span className="mt-1 block text-xs font-black uppercase text-[#5f6670]">{item.label}</span>
+                  </div>
+                  <strong className="text-[#141414]">{item.value}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        <article className="rounded-[8px] border border-[#141414]/10 bg-white p-5 shadow-[0_18px_50px_rgba(1,22,56,0.08)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase text-[#c79f1d]">Activity feed</p>
+              <h3 className="mt-1 text-xl font-black text-[#141414]">Latest movement</h3>
+            </div>
+            <Bell className="size-5 text-[#0d21a1]" />
+          </div>
+          <div className="mt-5 grid gap-3">
+            {recentLeads.map((lead) => (
+              <div key={lead.id} className="rounded-[8px] border border-[#141414]/10 bg-[#fbfcff] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <strong className="text-sm text-[#141414]">{lead.company}</strong>
+                  <Badge tone={statusTone(lead.status)}>{statusLabels[lead.status]}</Badge>
+                </div>
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#5f6670]">{lead.need}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+      </div>
+
+      <div className="lg:col-span-2 grid grid-cols-[1fr_auto] gap-5 rounded-[8px] border border-[#141414]/10 bg-white p-5 shadow-sm max-lg:grid-cols-1">
+        <div>
+          <p className="text-xs font-black uppercase text-[#c79f1d]">Market pulse</p>
+          <h3 className="mt-2 text-2xl font-black text-[#141414]">Coverage signals for the current operator view.</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {topRegions.map((region) => (
+            <Badge key={region}>{region}</Badge>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ArtifactVault({
+  artifacts,
+  vendors
+}: {
+  artifacts: DemoArtifact[];
+  vendors: Vendor[];
+}) {
+  return (
+    <section className="rounded-[8px] border border-[#141414]/10 bg-white p-7 shadow-[0_18px_55px_rgba(1,22,56,0.08)]">
+      <div className="grid gap-5 lg:grid-cols-[0.78fr_1fr] lg:items-end">
+        <div>
+          <p className="text-xs font-black uppercase text-[#c79f1d]">Deal room artifacts</p>
+          <h2 className="mt-3 text-3xl font-black leading-tight text-[#141414]">Demo documents that make the portal feel live.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#5f6670]">
+            Verification packets, compliance briefs, market snapshots, and supplier exports give the marketplace a more tangible buyer workflow.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
+          {[
+            ["4", "demo artifacts"],
+            ["3", "export formats"],
+            ["100%", "synthetic data"]
+          ].map(([value, label]) => (
+            <div key={label} className="rounded-[8px] border border-[#141414]/10 bg-[#eef0f2] p-4">
+              <strong className="block text-2xl font-black text-[#011638]">{value}</strong>
+              <span className="text-xs font-black uppercase text-[#5f6670]">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {artifacts.map((artifact) => {
+          const vendor = vendors.find((item) => item.slug === artifact.vendorSlug);
+          const tone: "royal" | "gold" | "neutral" =
+            artifact.status === "approved" ? "royal" : artifact.status === "review" ? "gold" : "neutral";
+          return (
+            <article key={artifact.id} className="grid rounded-[8px] border border-[#141414]/10 bg-[#fbfcff] p-5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="grid size-11 place-items-center rounded-[8px] bg-[#011638] text-[#eec643]">
+                  {artifact.type.includes("packet") ? <FileCheck2 className="size-5" /> : <FileText className="size-5" />}
+                </span>
+                <Badge tone={tone}>{artifact.status}</Badge>
+              </div>
+              <h3 className="mt-5 text-lg font-black leading-snug text-[#141414]">{artifact.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[#5f6670]">{artifact.summary}</p>
+              <dl className="mt-5 grid gap-2 text-xs text-[#5f6670]">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="font-black uppercase">Vendor</dt>
+                  <dd className="text-right text-[#141414]">{vendor?.name || artifact.vendorSlug}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="font-black uppercase">Updated</dt>
+                  <dd className="text-right text-[#141414]">{formatArtifactDate(artifact.updatedAt)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="font-black uppercase">Size</dt>
+                  <dd className="text-right text-[#141414]">{artifact.fileSize}</dd>
+                </div>
+              </dl>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {artifact.signals.slice(0, 2).map((signal) => (
+                  <Badge key={signal}>{signal}</Badge>
+                ))}
+              </div>
+              <div className="mt-5 flex gap-2 self-end">
+                <a
+                  className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#141414]/10 bg-white px-3 text-sm font-black text-[#141414] hover:border-[#0d21a1]/25"
+                  href={artifact.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <FolderOpen className="size-4" />
+                  View
+                </a>
+                <a
+                  className="inline-flex h-10 items-center gap-2 rounded-[7px] bg-[#011638] px-3 text-sm font-black text-white hover:bg-[#0d21a1]"
+                  href={artifact.href}
+                  download
+                >
+                  <Download className="size-4" />
+                  Save
+                </a>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function ServiceTracks() {
   const tracks = [
     {
@@ -785,20 +1053,42 @@ function LeadFlow() {
 function ModerationQueue({
   leads,
   vendors,
+  user,
+  onLogin,
   onStatus
 }: {
   leads: Lead[];
   vendors: Vendor[];
+  user: User | null;
+  onLogin: () => void;
   onStatus: (id: string, status: LeadStatus) => void;
 }) {
+  const isAdmin = user?.role === "admin";
+
   return (
     <section id="moderation" className="rounded-[8px] border border-[#141414]/10 bg-white p-7">
       <div className="flex items-end justify-between gap-4 max-sm:block">
         <p className="text-xs font-black uppercase text-[#c79f1d]">Admin view</p>
         <h2 className="text-3xl font-black text-[#141414]">Moderation queue</h2>
       </div>
+      {!isAdmin ? (
+        <div className="mt-6 grid gap-4 rounded-[8px] border border-[#141414]/10 bg-[#fbfcff] p-5 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <Badge tone="royal">Protected</Badge>
+            <h3 className="mt-3 text-xl font-black text-[#141414]">Admin session required</h3>
+            <p className="mt-2 text-sm leading-6 text-[#5f6670]">
+              Lead moderation is now backed by protected API routes. Sign in with the demo
+              username <strong>admin</strong> to test queue review and status updates.
+            </p>
+          </div>
+          <Button onClick={onLogin}>
+            <LogIn className="size-4" />
+            Admin login
+          </Button>
+        </div>
+      ) : null}
       <div className="mt-6 grid gap-3">
-        {leads.map((lead) => {
+        {isAdmin && leads.map((lead) => {
           const vendor = vendors.find((item) => item.slug === lead.vendorSlug);
           return (
             <article key={lead.id} className="grid grid-cols-[1fr_0.78fr_auto] gap-5 rounded-[8px] border border-[#141414]/10 bg-[#fbfcff] p-5 max-lg:grid-cols-1">
@@ -972,7 +1262,89 @@ function VendorProfile({
   );
 }
 
-function Header() {
+function AuthPage({
+  onLogin
+}: {
+  onLogin: (username: string) => Promise<void>;
+}) {
+  const [username, setUsername] = useState("demo");
+  const [status, setStatus] = useState("");
+
+  async function submitLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("");
+    try {
+      await onLogin(username);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Login failed.");
+    }
+  }
+
+  return (
+    <main className="mx-auto grid min-h-[calc(100vh-74px)] max-w-[1540px] items-center px-5 py-8">
+      <section className="grid overflow-hidden rounded-[8px] border border-[#141414]/10 bg-white shadow-[0_28px_90px_rgba(1,22,56,0.16)] lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="relative overflow-hidden bg-[#011638] p-8 text-white lg:p-12">
+          <div className="absolute bottom-[-130px] right-[-90px] size-72 rounded-full border border-[#eec643]/40" />
+          <span className="grid size-12 place-items-center rounded-[8px] bg-[#eec643] text-[#141414]">
+            <LockKeyhole className="size-6" />
+          </span>
+          <p className="mt-8 text-xs font-black uppercase text-[#eec643]">Operator access</p>
+          <h1 className="mt-4 max-w-xl text-5xl font-black leading-tight">Sign in to the TECHNOseller workspace.</h1>
+          <p className="mt-5 max-w-xl leading-7 text-white/72">
+            This is a demo authentication flow backed by the Node API. Use any dummy username to create a local operator session.
+          </p>
+          <div className="mt-8 grid gap-3 rounded-[8px] border border-white/12 bg-white/8 p-4 text-sm text-white/78">
+            <div className="flex items-center gap-3">
+              <UserRound className="size-4 text-[#eec643]" />
+              <span>Try username <strong className="text-white">demo</strong> or <strong className="text-white">admin</strong>.</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="size-4 text-[#eec643]" />
+              <span>The server returns an HTTP-only session cookie.</span>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={submitLogin} className="grid content-center gap-5 p-8 lg:p-12">
+          <div>
+            <p className="text-xs font-black uppercase text-[#c79f1d]">Demo login</p>
+            <h2 className="mt-2 text-3xl font-black text-[#141414]">Continue as operator</h2>
+            <p className="mt-3 text-sm leading-6 text-[#5f6670]">
+              No password is required yet. This gives you a testable auth page and backend session loop without introducing real credentials.
+            </p>
+          </div>
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase text-[#5f6670]">Username</span>
+            <input
+              className="h-12 rounded-[7px] border border-[#141414]/10 bg-white px-3 font-bold outline-none focus:ring-3 focus:ring-[#0d21a1]/15"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="demo"
+              autoComplete="username"
+              required
+            />
+          </label>
+          <Button className="w-full" type="submit">
+            <LogIn className="size-4" />
+            Login
+          </Button>
+          {status && <p className="text-sm font-black text-[#0d21a1]">{status}</p>}
+          <Button type="button" variant="secondary" onClick={() => navigate("/")}>
+            Back to directory
+          </Button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+function Header({
+  user,
+  onLogout
+}: {
+  user: User | null;
+  onLogout: () => Promise<void>;
+}) {
   return (
     <header className="sticky top-0 z-30 border-b border-[#141414]/10 bg-white/88 px-5 py-3 backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1540px] items-center justify-between gap-4">
@@ -985,10 +1357,66 @@ function Header() {
             <span className="text-xs text-[#5f6670]">Vendor discovery and trade services</span>
           </span>
         </button>
-        <nav className="flex gap-2 text-sm font-bold text-[#5f6670] max-sm:hidden">
+        <nav className="flex flex-wrap justify-end gap-2 text-sm font-bold text-[#5f6670] max-sm:basis-full max-sm:justify-start">
           <button className="rounded-[7px] px-3 py-2 hover:bg-[#eef0f2]" onClick={() => navigate("/")}>Directory</button>
           <button className="rounded-[7px] px-3 py-2 hover:bg-[#eef0f2]" onClick={() => document.getElementById("lead-flow")?.scrollIntoView({ behavior: "smooth" })}>Leads</button>
           <button className="rounded-[7px] px-3 py-2 hover:bg-[#eef0f2]" onClick={() => document.getElementById("moderation")?.scrollIntoView({ behavior: "smooth" })}>Moderation</button>
+          {user ? (
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button className="inline-flex items-center gap-2 rounded-[8px] border border-[#141414]/10 bg-white px-2 py-1.5 text-[#141414] shadow-sm hover:border-[#0d21a1]/25">
+                  <span className="grid size-8 place-items-center rounded-[7px] bg-[#011638] text-xs font-black text-[#eec643]">
+                    {initials(user.displayName || user.username)}
+                  </span>
+                  <span className="max-w-32 truncate text-sm font-black">{user.displayName || user.username}</span>
+                  <ChevronDown className="size-4 text-[#5f6670]" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={8}
+                  className="z-50 w-72 rounded-[8px] border border-[#141414]/10 bg-white p-2 shadow-[0_24px_70px_rgba(1,22,56,0.18)]"
+                >
+                  <div className="flex items-center gap-3 rounded-[8px] bg-[#eef0f2] p-3">
+                    <span className="grid size-12 place-items-center rounded-[8px] bg-[#011638] text-sm font-black text-[#eec643]">
+                      {initials(user.displayName || user.username)}
+                    </span>
+                    <div className="min-w-0">
+                      <strong className="block truncate text-sm font-black text-[#141414]">{user.displayName || user.username}</strong>
+                      <span className="text-xs font-bold uppercase text-[#5f6670]">{user.role} account</span>
+                    </div>
+                  </div>
+                  <DropdownMenu.Item className="mt-2 flex cursor-pointer items-center gap-2 rounded-[7px] px-3 py-2 text-sm font-bold outline-none data-[highlighted]:bg-[#eef0f2]">
+                    <UserCog className="size-4 text-[#0d21a1]" />
+                    Profile settings
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-[7px] px-3 py-2 text-sm font-bold outline-none data-[highlighted]:bg-[#eef0f2]">
+                    <Bell className="size-4 text-[#0d21a1]" />
+                    Notifications
+                    <Badge tone="gold">3</Badge>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-[7px] px-3 py-2 text-sm font-bold outline-none data-[highlighted]:bg-[#eef0f2]">
+                    <Settings className="size-4 text-[#0d21a1]" />
+                    Workspace settings
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator className="my-2 h-px bg-[#141414]/10" />
+                  <DropdownMenu.Item
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      void onLogout();
+                    }}
+                    className="flex cursor-pointer items-center gap-2 rounded-[7px] px-3 py-2 text-sm font-black text-[#141414] outline-none data-[highlighted]:bg-[#eef0f2]"
+                  >
+                    <LogOut className="size-4 text-[#0d21a1]" />
+                    Logout
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          ) : (
+            <button className="rounded-[7px] bg-[#011638] px-3 py-2 text-white hover:bg-[#0d21a1]" onClick={() => navigate("/login")}>Login</button>
+          )}
         </nav>
       </div>
     </header>
@@ -999,11 +1427,13 @@ export default function App() {
   const [taxonomy, setTaxonomy] = useState<Taxonomy | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [artifacts, setArtifacts] = useState<DemoArtifact[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [activeView, setActiveView] = useState<ViewKey>("all");
   const [path, setPath] = useState(window.location.pathname);
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   const vendorSlug = useMemo(() => path.match(/^\/vendors\/([a-z0-9-]+)$/)?.[1], [path]);
 
@@ -1020,8 +1450,23 @@ export default function App() {
       setTaxonomy(payload.taxonomy);
       setSummary(payload.summary);
     });
-    request<{ leads: Lead[] }>("/api/admin/leads").then((payload) => setLeads(payload.leads));
+    request<{ artifacts: DemoArtifact[] }>("/api/artifacts")
+      .then((payload) => setArtifacts(payload.artifacts))
+      .catch(() => setArtifacts([]));
+    request<AuthSession>("/api/auth/session")
+      .then((payload) => setUser(payload.user))
+      .catch(() => setUser(null));
   }, []);
+
+  useEffect(() => {
+    if (user?.role !== "admin") {
+      setLeads([]);
+      return;
+    }
+    request<{ leads: Lead[] }>("/api/admin/leads")
+      .then((payload) => setLeads(payload.leads))
+      .catch(() => setLeads([]));
+  }, [user]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -1055,6 +1500,10 @@ export default function App() {
   }
 
   async function updateLeadStatus(id: string, status: LeadStatus) {
+    if (user?.role !== "admin") {
+      navigate("/login");
+      return;
+    }
     const payload = await request<{ lead: Lead }>(`/api/admin/leads/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status })
@@ -1067,14 +1516,41 @@ export default function App() {
       method: "POST",
       body: JSON.stringify(payload)
     });
-    const queue = await request<{ leads: Lead[] }>("/api/admin/leads");
-    setLeads(queue.leads);
+    if (user?.role === "admin") {
+      const queue = await request<{ leads: Lead[] }>("/api/admin/leads");
+      setLeads(queue.leads);
+    }
+  }
+
+  async function login(username: string) {
+    const payload = await request<AuthSession>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username })
+    });
+    setUser(payload.user);
+    navigate("/");
+  }
+
+  async function logout() {
+    await request<AuthSession>("/api/auth/logout", { method: "POST" });
+    setUser(null);
+    if (path === "/login") return;
+    navigate("/");
+  }
+
+  if (path === "/login") {
+    return (
+      <>
+        <Header user={user} onLogout={logout} />
+        <AuthPage onLogin={login} />
+      </>
+    );
   }
 
   if (vendorSlug) {
     return (
       <>
-        <Header />
+        <Header user={user} onLogout={logout} />
         <VendorProfile vendor={activeVendor} onLead={submitLead} />
       </>
     );
@@ -1082,7 +1558,7 @@ export default function App() {
 
   return (
     <>
-      <Header />
+      <Header user={user} onLogout={logout} />
       <main className="mx-auto grid max-w-[1540px] gap-6 px-5 py-6">
         <Hero
           taxonomy={taxonomy}
@@ -1098,6 +1574,14 @@ export default function App() {
           <StatTile value={summary?.serviceCount || 0} label="service lines" />
           <StatTile value={summary?.verifiedCount || 0} label="verified" />
         </section>
+        <OperatorWidgets
+          summary={summary}
+          vendors={vendors}
+          leads={leads}
+          user={user}
+          onLogin={() => navigate("/login")}
+        />
+        <ArtifactVault artifacts={artifacts} vendors={vendors} />
         <section className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           <InsightPanel />
           <Directory vendors={vendors} sort={filters.sort} />
@@ -1107,7 +1591,13 @@ export default function App() {
         <OperatingSystem />
         <PlatformDepth />
         <LeadFlow />
-        <ModerationQueue leads={leads} vendors={vendors} onStatus={updateLeadStatus} />
+        <ModerationQueue
+          leads={leads}
+          vendors={vendors}
+          user={user}
+          onLogin={() => navigate("/login")}
+          onStatus={updateLeadStatus}
+        />
       </main>
       <footer className="mt-8 border-t border-[#141414]/10 px-5 py-8 text-sm text-[#5f6670]">
         <div className="mx-auto flex max-w-[1540px] justify-between gap-4 max-sm:block">

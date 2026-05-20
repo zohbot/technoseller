@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Vendor {
+  id                 String   @id
+  slug               String   @unique
+  name               String
+  tagline            String
+  summary            String
+  regionsJson        String
+  servicesJson       String
+  verificationStatus String
+  rating             Float
+  responseTime       String
+  headquarters       String
+  founded            Int
+  teamSize           String
+  leadScore          Int
+  opportunitiesJson  String
+  capabilitiesJson   String
+  profile            String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  leads              Lead[]
+
+  @@index([leadScore])
+  @@index([verificationStatus])
+}
+
+model Lead {
+  id         String   @id
+  vendorSlug String
+  company    String
+  name       String
+  email      String
+  need       String
+  timeline   String
+  status     String   @default("needs-review")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  vendor     Vendor   @relation(fields: [vendorSlug], references: [slug], onDelete: Cascade)
+
+  @@index([status])
+  @@index([vendorSlug])
+}
+
+model User {
+  id          String    @id @default(cuid())
+  username    String    @unique
+  displayName String
+  role        String    @default("operator")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  sessions    Session[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}

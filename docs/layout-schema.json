@@ -15,6 +15,7 @@
         "workspace",
         "search-console",
         "summary-stats",
+        "operator-widgets",
         "operator-focus",
         "vendor-grid",
         "service-tracks",
@@ -40,6 +41,14 @@
     {
       "name": "SearchConsole",
       "responsibility": "Command-style resource finder with saved views, primary filters, active pills, advanced drawer, result count, and sorting"
+    },
+    {
+      "name": "UserProfileMenu",
+      "responsibility": "Signed-in avatar dropdown with profile, notifications, settings, and logout actions"
+    },
+    {
+      "name": "OperatorWidgets",
+      "responsibility": "Dashboard-style KPI, workflow pipeline, activity feed, and market pulse widgets"
     },
     {
       "name": "VendorCard",

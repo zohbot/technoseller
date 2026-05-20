@@ -4,7 +4,7 @@ export function normalize(value = "") {
   return String(value).trim().toLowerCase();
 }
 
-export function filterVendors(params = {}) {
+export function filterVendorList(items, params = {}) {
   const query = normalize(params.query);
   const region = normalize(params.region);
   const service = normalize(params.service);
@@ -13,7 +13,7 @@ export function filterVendors(params = {}) {
   const response = normalize(params.response);
   const sort = normalize(params.sort || "fit");
 
-  const filtered = vendors
+  const filtered = items
     .filter((vendor) => {
       const searchable = [
         vendor.name,
@@ -56,6 +56,10 @@ export function filterVendors(params = {}) {
   return sortVendors(filtered, sort);
 }
 
+export function filterVendors(params = {}) {
+  return filterVendorList(vendors, params);
+}
+
 function responseRank(vendor) {
   const time = normalize(vendor.responseTime);
   if (time.includes("4 hours")) return 1;
@@ -78,17 +82,21 @@ export function findVendor(slug) {
   return vendors.find((vendor) => vendor.slug === slug);
 }
 
-export function summarizeMarketplace() {
-  const regionCount = new Set(vendors.flatMap((vendor) => vendor.regions)).size;
-  const serviceCount = new Set(vendors.flatMap((vendor) => vendor.services)).size;
-  const verifiedCount = vendors.filter(
+export function summarizeVendorList(items) {
+  const regionCount = new Set(items.flatMap((vendor) => vendor.regions)).size;
+  const serviceCount = new Set(items.flatMap((vendor) => vendor.services)).size;
+  const verifiedCount = items.filter(
     (vendor) => vendor.verificationStatus === "verified"
   ).length;
 
   return {
-    vendorCount: vendors.length,
+    vendorCount: items.length,
     regionCount,
     serviceCount,
     verifiedCount
   };
+}
+
+export function summarizeMarketplace() {
+  return summarizeVendorList(vendors);
 }
